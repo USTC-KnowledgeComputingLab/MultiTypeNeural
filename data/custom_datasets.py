@@ -6,6 +6,8 @@ import numpy as np
 from tqdm.auto import tqdm
 from PIL import Image
 from datasets import load_dataset
+from torchvision.datasets import ImageFolder
+import os
 
 class SortDataset(Dataset):
     def __init__(self, N):
@@ -115,7 +117,7 @@ class QAMNISTDataset(Dataset):
         return observations, question, question_readable, target
 
 class ImageNet(Dataset):
-    def __init__(self, which_split, transform):
+    def __init__(self, which_split, data_dir, transform):
         """
         Most simple form of the custom dataset structure. 
         Args:
@@ -125,7 +127,8 @@ class ImageNet(Dataset):
             operators (list): list of operators from which to sample
             action to take on observations (str): can be 'global' to compute operator over full observations, or 'select_K', where K=integer.
         """
-        dataset = load_dataset('imagenet-1k', split=which_split, trust_remote_code=True)
+        data_dir = os.path.join(data_dir, which_split)
+        dataset = ImageFolder(root=data_dir, transform=transform)
 
         self.transform = transform
         self.base_dataset = dataset
@@ -134,10 +137,7 @@ class ImageNet(Dataset):
         return len(self.base_dataset)
 
     def __getitem__(self, idx):
-        data_item = self.base_dataset[idx]
-        image = self.transform(data_item['image'].convert('RGB'))
-        target = data_item['label']
-        return image, target
+        return self.base_dataset[idx]
   
 class MazeImageFolder(ImageFolder):
     """

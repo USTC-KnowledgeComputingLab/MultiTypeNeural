@@ -108,6 +108,7 @@ def parse_args():
     # Housekeeping
     parser.add_argument('--log_dir', type=str, default='logs/scratch', help='Directory for logging.')
     parser.add_argument('--dataset', type=str, default='cifar10', help='Dataset to use.')
+    parser.add_argument('--data_dir', type=str, help='Path to dataset')
     parser.add_argument('--data_root', type=str, default='data/', help='Where to save dataset.')
     parser.add_argument('--save_every', type=int, default=1000, help='Save checkpoints every this many iterations.')
     parser.add_argument('--seed', type=int, default=412, help='Random seed.')
@@ -124,7 +125,7 @@ def parse_args():
     return args
 
 
-def get_dataset(dataset, root):
+def get_dataset(dataset, data_dir=None, cacha_dir=None):
     if dataset=='imagenet':
         dataset_mean = [0.485, 0.456, 0.406]
         dataset_std = [0.229, 0.224, 0.225]
@@ -142,9 +143,8 @@ def get_dataset(dataset, root):
                     normalize])
 
         class_labels = list(IMAGENET2012_CLASSES.values())
-
-        train_data = ImageNet(which_split='train', transform=train_transform)
-        test_data = ImageNet(which_split='validation', transform=test_transform)
+        train_data = ImageNet(which_split='train', data_dir=data_dir, transform=train_transform)
+        test_data = ImageNet(which_split='validation', data_dir=data_dir, transform=test_transform)
     elif dataset=='cifar10':
         dataset_mean = [0.49139968, 0.48215827, 0.44653124]
         dataset_std = [0.24703233, 0.24348505, 0.26158768]
@@ -159,8 +159,12 @@ def get_dataset(dataset, root):
             [transforms.ToTensor(),
             normalize,
             ])
-        train_data = datasets.CIFAR10(root, train=True, transform=train_transform, download=True)
-        test_data = datasets.CIFAR10(root, train=False, transform=test_transform, download=True)
+        if data_dir:
+            train_data = ImageNet(which_split='train', data_dir=data_dir, transform=train_transform)
+            test_data = ImageNet(which_split='validation', data_dir=data_dir, transform=test_transform)
+        else:
+            train_data = datasets.CIFAR10(cacha_dir, train=True, transform=train_transform, download=True)
+            test_data = datasets.CIFAR10(cacha_dir, train=False, transform=test_transform, download=True)
         class_labels = ['air', 'auto', 'bird', 'cat', 'deer', 'dog', 'frog', 'horse', 'ship', 'truck']
     elif dataset=='cifar100':
         dataset_mean = [0.5070751592371341, 0.48654887331495067, 0.4409178433670344]
@@ -176,8 +180,12 @@ def get_dataset(dataset, root):
             [transforms.ToTensor(),
             normalize,
             ])
-        train_data = datasets.CIFAR100(root, train=True, transform=train_transform, download=True)
-        test_data = datasets.CIFAR100(root, train=False, transform=test_transform, download=True)
+        if data_dir:
+            train_data = ImageNet(which_split='train', data_dir=data_dir, transform=train_transform)
+            test_data = ImageNet(which_split='validation', data_dir=data_dir, transform=test_transform)
+        else:
+            train_data = datasets.CIFAR100(cacha_dir, train=True, transform=train_transform, download=True)
+            test_data = datasets.CIFAR100(cacha_dir, train=False, transform=test_transform, download=True)
         idx_order = np.argsort(np.array(list(train_data.class_to_idx.values())))
         class_labels = list(np.array(list(train_data.class_to_idx.keys()))[idx_order])
     else:

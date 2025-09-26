@@ -112,6 +112,7 @@ def parse_args():
     # Housekeeping 
     parser.add_argument('--log_dir', type=str, default='logs/scratch', help='Directory for logging.')
     parser.add_argument('--dataset', type=str, default='cifar10', help='Dataset to use.')
+    parser.add_argument('--data_dir', type=str, help='Path to dataset')
     parser.add_argument('--data_root', type=str, default='data/', help='Where to save dataset.')
     parser.add_argument('--save_every', type=int, default=1000, help='Save checkpoints every this many iterations.')
     parser.add_argument('--seed', type=int, default=412, help='Random seed.')
@@ -192,7 +193,10 @@ if __name__=='__main__':
     assert args.dataset in ['cifar10', 'cifar100', 'imagenet']
 
     # Data Loading
-    train_data, test_data, class_labels, dataset_mean, dataset_std = get_dataset(args.dataset, args.data_root)
+    if args.data_dir:
+        train_data, test_data, class_labels, dataset_mean, dataset_std = get_dataset(args.dataset, data_dir=args.data_dir)
+    else:
+        train_data, test_data, class_labels, dataset_mean, dataset_std = get_dataset(args.dataset, cacha_dir=args.data_root)
 
     # Setup Samplers
     # This custom sampler is useful when using large batch sizes for Cifar. Otherwise the reshuffle happens tediously often
