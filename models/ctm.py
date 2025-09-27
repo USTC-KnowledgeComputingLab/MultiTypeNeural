@@ -488,11 +488,11 @@ class ContinuousThoughtMachine(nn.Module):
         attention_tracking = []
 
         # --- Featurise Input Data ---
-        kv = self.compute_features(x)
+        kv = self.compute_features(x) # Shape : (B, L, d_input)
 
         # --- Initialise Recurrent State ---
-        state_trace = self.start_trace.unsqueeze(0).expand(B, -1, -1) # Shape: (B, H, T)
-        activated_state = self.start_activated_state.unsqueeze(0).expand(B, -1) # Shape: (B, H)
+        state_trace = self.start_trace.unsqueeze(0).expand(B, -1, -1) # Shape: (B, d_model, T)
+        activated_state = self.start_activated_state.unsqueeze(0).expand(B, -1) # Shape: (B, d_model)
 
         # --- Prepare Storage for Outputs per Iteration ---
         predictions = torch.empty(B, self.out_dims, self.iterations, device=device, dtype=torch.float32)
@@ -513,20 +513,21 @@ class ContinuousThoughtMachine(nn.Module):
 
             # --- Calculate Synchronisation for Input Data Interaction ---
             synchronisation_action, decay_alpha_action, decay_beta_action = self.compute_synchronisation(activated_state, decay_alpha_action, decay_beta_action, r_action, synch_type='action')
+            # synchronisation_action Shape: (B, n_synch_action)
 
             # --- Interact with Data via Attention ---
-            q = self.q_proj(synchronisation_action).unsqueeze(1)
-            attn_out, attn_weights = self.attention(q, kv, kv, average_attn_weights=False, need_weights=True)
-            attn_out = attn_out.squeeze(1)
-            pre_synapse_input = torch.concatenate((attn_out, activated_state), dim=-1)
+            q = self.q_proj(synchronisation_action).unsqueeze(1) # Shape: (B, 1, d_input)
+            attn_out, attn_weights = self.attention(q, kv, kv, average_attn_weights=False, need_weights=True) # Shape: (B, 1, d_input), (B, heads, 1, L)
+            attn_out = attn_out.squeeze(1) # Shape: (B, d_input)
+            pre_synapse_input = torch.concatenate((attn_out, activated_state), dim=-1) # Shape: (B, d_input + d_model)
 
             # --- Apply Synapses ---
-            state = self.synapses(pre_synapse_input)
+            state = self.synapses(pre_synapse_input) # Shape: (B, d_model)
             # The 'state_trace' is the history of incoming pre-activations
-            state_trace = torch.cat((state_trace[:, :, 1:], state.unsqueeze(-1)), dim=-1)
+            state_trace = torch.cat((state_trace[:, :, 1:], state.unsqueeze(-1)), dim=-1) # Shape: (B, d_model, memory_length)
 
             # --- Apply Neuron-Level Models ---
-            activated_state = self.trace_processor(state_trace)
+            activated_state = self.trace_processor(state_trace) # Shape: (B, d_model)
             # One would also keep an 'activated_state_trace' as the history of outgoing post-activations
             # BUT, this is unnecessary because the synchronisation calculation is fully linear and can be
             # done using only the currect activated state (see compute_synchronisation method for explanation)
@@ -535,11 +536,11 @@ class ContinuousThoughtMachine(nn.Module):
             synchronisation_out, decay_alpha_out, decay_beta_out = self.compute_synchronisation(activated_state, decay_alpha_out, decay_beta_out, r_out, synch_type='out')
 
             # --- Get Predictions and Certainties ---
-            current_prediction = self.output_projector(synchronisation_out)
-            current_certainty = self.compute_certainty(current_prediction)
+            current_prediction = self.output_projector(synchronisation_out) # Shape: (B, out_dims)
+            current_certainty = self.compute_certainty(current_prediction) # Shape: (B, 2)
 
-            predictions[..., stepi] = current_prediction
-            certainties[..., stepi] = current_certainty
+            predictions[..., stepi] = current_prediction # Shape: (B, out_dims, iterations)
+            certainties[..., stepi] = current_certainty # Shape: (B, out_dims, iterations)
 
             # --- Tracking ---
             if track:
