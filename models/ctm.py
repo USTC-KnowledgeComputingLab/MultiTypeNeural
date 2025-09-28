@@ -514,6 +514,7 @@ class ContinuousThoughtMachine(nn.Module):
             # --- Calculate Synchronisation for Input Data Interaction ---
             synchronisation_action, decay_alpha_action, decay_beta_action = self.compute_synchronisation(activated_state, decay_alpha_action, decay_beta_action, r_action, synch_type='action')
             # synchronisation_action Shape: (B, n_synch_action)
+            # activated_state is the "Post-activations"
 
             # --- Interact with Data via Attention ---
             q = self.q_proj(synchronisation_action).unsqueeze(1) # Shape: (B, 1, d_input)
