@@ -18,6 +18,7 @@ from torchvision import datasets
 from torchvision import transforms
 from tasks.image_classification.imagenet_classes import IMAGENET2012_CLASSES
 from models.ctm import ContinuousThoughtMachine
+from models.ctm_test import TestContinuousThoughtMachine
 from models.lstm import LSTMBaseline
 from models.ff import FFBaseline
 from tasks.image_classification.plotting import plot_neural_dynamics, make_classification_gif
@@ -196,6 +197,8 @@ def get_dataset(dataset, data_dir=None, cacha_dir=None):
 
 
 if __name__=='__main__':
+    # Set mirrors
+    os.environ['TORCHVISION_DATASETS_URL'] = 'https://mirrors.tuna.tsinghua.edu.cn/torchvision/'
 
     # Hosuekeeping
     args = parse_args()
@@ -206,7 +209,7 @@ if __name__=='__main__':
     assert args.dataset in ['cifar10', 'cifar100', 'imagenet']
 
     # Data
-    train_data, test_data, class_labels, dataset_mean, dataset_std = get_dataset(args.dataset, args.data_root)
+    train_data, test_data, class_labels, dataset_mean, dataset_std = get_dataset(args.dataset, args.data_dir, args.data_root)
     
     num_workers_test = 1 # Defaulting to 1, change if needed
     trainloader = torch.utils.data.DataLoader(train_data, batch_size=args.batch_size, shuffle=True, num_workers=args.num_workers_train)
@@ -233,6 +236,28 @@ if __name__=='__main__':
     model = None
     if args.model == 'ctm':
         model = ContinuousThoughtMachine(
+            iterations=args.iterations,
+            d_model=args.d_model,
+            d_input=args.d_input,
+            heads=args.heads,
+            n_synch_out=args.n_synch_out,
+            n_synch_action=args.n_synch_action,
+            synapse_depth=args.synapse_depth,
+            memory_length=args.memory_length,
+            deep_nlms=args.deep_memory,
+            memory_hidden_dims=args.memory_hidden_dims,
+            do_layernorm_nlm=args.do_normalisation,
+            backbone_type=args.backbone_type,
+            positional_embedding_type=args.positional_embedding_type,
+            out_dims=args.out_dims,
+            prediction_reshaper=prediction_reshaper,
+            dropout=args.dropout,
+            dropout_nlm=args.dropout_nlm,
+            neuron_select_type=args.neuron_select_type,
+            n_random_pairing_self=args.n_random_pairing_self,
+        ).to(device)
+    elif args.model == 'ctm_test':
+        model = TestContinuousThoughtMachine(
             iterations=args.iterations,
             d_model=args.d_model,
             d_input=args.d_input,
